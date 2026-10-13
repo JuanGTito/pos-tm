@@ -1,59 +1,76 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Control de ventas e inventario
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplicación Laravel 12 para una tienda de electrónicos y productos no perecederos. Está pensada para hosting compartido con PHP y MySQL, incluido Hostinger.
 
-## About Laravel
+## Funciones principales
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- Venta directa sin apertura ni cierre de caja.
+- Descuento automático de stock al vender y restauración al anular una venta.
+- Ingreso masivo de mercadería nueva o reposición de productos existentes.
+- Historial de ingresos con proveedor, referencia, costo, precio de venta y lote.
+- Actualización del costo y precio actual al reponer un producto.
+- Separación entre inversión externa y reinversión del fondo acumulado de ventas.
+- Gastos operativos por categoría, origen del dinero, notas y foto del comprobante.
+- Tablero con ventas, fondo disponible, egresos, reinversión, inversión externa y valor del inventario.
+- Alertas de stock mínimo y categorías orientadas a electrónicos.
+- Interfaz clara y adaptable con navegación lateral, iconografía uniforme y tipografía legible.
+- Configuración de "Mi empresa" para logo, icono del sistema, nombre comercial, RUC, serie de boleta, giro, contacto y ubicación.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+No se maneja fecha de vencimiento. El lote se conserva como dato trazable de cada ingreso.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Desarrollo local
 
-## Learning Laravel
+Requisitos: PHP 8.2 o superior, Composer, Node.js y las extensiones PDO/SQLite o PDO/MySQL.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```bash
+composer install
+npm ci
+cp .env.example .env
+php artisan key:generate
+```
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Para SQLite, crea `database/database.sqlite` y configura `DB_CONNECTION=sqlite`. Luego:
 
-## Laravel Sponsors
+```bash
+php artisan migrate --seed
+php artisan storage:link
+npm run build
+php artisan serve
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Pruebas:
 
-### Premium Partners
+```bash
+php artisan test
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Despliegue en Hostinger
 
-## Contributing
+1. Selecciona PHP 8.2 o superior y crea una base de datos MySQL desde hPanel.
+2. Sube el proyecto y configura el document root del dominio a la carpeta `public` del proyecto. No expongas `.env`, `app`, `config`, `database` ni `storage` dentro del directorio público.
+3. Copia `.env.example` como `.env` y completa `APP_URL`, `APP_KEY`, `DB_DATABASE`, `DB_USERNAME` y `DB_PASSWORD`. Mantén `APP_ENV=production` y `APP_DEBUG=false`.
+4. Compila los recursos antes de subirlos (`npm ci && npm run build`) o ejecútalo por SSH si el plan lo permite. La carpeta `public/build` debe quedar desplegada.
+5. Por SSH, desde la raíz del proyecto, ejecuta:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+```bash
+composer install --no-dev --optimize-autoloader
+php artisan migrate --force
+php artisan storage:link
+php artisan optimize
+```
 
-## Code of Conduct
+6. Da permiso de escritura al usuario de PHP sobre `storage` y `bootstrap/cache`.
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Las fotos se guardan en `storage/app/public`. Si el plan no permite enlaces simbólicos, crea manualmente en `public/storage` un enlace hacia esa carpeta desde el administrador de archivos o SSH.
 
-## Security Vulnerabilities
+No ejecutes los seeders de usuarios de demostración en producción. Crea el administrador con una contraseña propia y segura.
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+## Flujo financiero implementado
 
-## License
+El fondo disponible se calcula como:
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+```text
+ventas completadas - gastos pagados con ventas
+```
+
+Cuando una reposición se paga con el fondo de ventas, el sistema crea un gasto enlazado a ese ingreso. Por eso se descuenta una sola vez. Una compra pagada con inversión externa aumenta el inventario, pero no reduce el fondo acumulado de ventas.

@@ -2,33 +2,44 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
+use App\Models\Expense;
 use App\Models\Product;
 use App\Models\ProductPurchase;
+use App\Models\ProductPurchaseItem;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
+use Throwable;
 
 class ProductController extends Controller
 {
     public function index(Request $request)
     {
-        $search = $request->get('search', '');
-        
-        if ($search) {
-            $products = Product::where('code', 'LIKE', "%$search%")
-                ->orWhere('name', 'LIKE', "%$search%")
-                ->orWhere('description', 'LIKE', "%$search%")
-                ->orderBy('id', 'desc')
-                ->paginate(15);
-        } else {
-            $products = Product::orderBy('id', 'desc')->paginate(15);
-        }
-        
-        // If it is an AJAX request, returns only the table
+        $search = trim((string) $request->get('search', ''));
+        $category = trim((string) $request->get('category', ''));
+
+        $products = Product::query()
+            ->when($search, function ($query) use ($search) {
+                $query->where(function ($subquery) use ($search) {
+                    $subquery->where('code', 'LIKE', "%{$search}%")
+                        ->orWhere('name', 'LIKE', "%{$search}%")
+                        ->orWhere('description', 'LIKE', "%{$search}%");
+                });
+            })
+            ->when($category, fn ($query) => $query->where('category', $category))
+            ->orderBy('name')
+            ->paginate(15)
+            ->withQueryString();
+
         if ($request->ajax()) {
             return view('products.partials.table', compact('products', 'search'));
         }
-        
-        return view('products.index', compact('products', 'search'));
+
+        $categories = Product::categories();
+
+        return view('products.index', compact('products', 'search', 'category', 'categories'));
     }
 
     public function create()
@@ -37,137 +48,200 @@ class ProductController extends Controller
         $availableSalesBalance = ProductPurchase::availableSalesBalance();
         $totalNewInvestment = ProductPurchase::totalNewInvestment();
         $totalSalesRevenue = ProductPurchase::totalSalesRevenue();
-        return view('products.partials.create', compact('categories', 'availableSalesBalance', 'totalNewInvestment', 'totalSalesRevenue'));
+        $productsCatalog = Product::orderBy('name')->get([
+            'id', 'code', 'name', 'category', 'description', 'purchase_price', 'sale_price', 'stock',
+        ]);
+
+        return view('products.partials.create', compact(
+            'categories',
+            'availableSalesBalance',
+            'totalNewInvestment',
+            'totalSalesRevenue',
+            'productsCatalog',
+        ));
     }
 
     public function store(Request $request)
     {
-        $request->validate([
-            'funding_source' => 'required|in:new_investment,sales_revenue',
-            'notes' => 'nullable|string|max:500',
-            'products' => 'required|array|min:1',
-            'products.*.code' => 'required|string|max:100',
-            'products.*.name' => 'required|string|max:255',
-            'products.*.description' => 'nullable|string',
-            'products.*.purchase_price' => 'required|numeric|min:0',
-            'products.*.sale_price' => 'nullable|numeric|min:0',
-            'products.*.stock' => 'required|integer|min:1',
+        $validated = $request->validate([
+            'purchase_date' => ['required', 'date'],
+            'supplier' => ['nullable', 'string', 'max:255'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'funding_source' => ['required', Rule::in(['new_investment', 'sales_revenue'])],
+            'notes' => ['nullable', 'string', 'max:1000'],
+            'photo' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:5120'],
+            'products' => ['required', 'array', 'min:1'],
+            'products.*.product_id' => ['nullable', 'integer', 'exists:products,id'],
+            'products.*.code' => ['required', 'string', 'max:20'],
+            'products.*.name' => ['required', 'string', 'max:255'],
+            'products.*.category' => ['required', Rule::in(array_keys(Product::categories()))],
+            'products.*.description' => ['nullable', 'string'],
+            'products.*.lot_number' => ['nullable', 'string', 'max:100'],
+            'products.*.purchase_price' => ['required', 'numeric', 'min:0'],
+            'products.*.sale_price' => ['nullable', 'numeric', 'min:0'],
+            'products.*.stock' => ['required', 'integer', 'min:1'],
         ]);
 
-        $productsData = $request->input('products');
-        $fundingSource = $request->input('funding_source');
-        $minStockDefault = 5;
-
-        // Calcular costo total de la compra y cantidad total de unidades
-        $totalCost = 0;
+        $seenProducts = [];
+        $totalCost = 0.0;
         $totalQuantity = 0;
-        foreach ($productsData as $item) {
-            $totalCost += ((float) $item['purchase_price']) * ((int) $item['stock']);
+
+        foreach ($validated['products'] as $index => $item) {
+            $identity = 'code:'.strtoupper(trim($item['code']));
+            if (isset($seenProducts[$identity])) {
+                throw ValidationException::withMessages([
+                    "products.{$index}.code" => 'El mismo producto no puede repetirse en un ingreso. Agrupa las unidades en una sola fila.',
+                ]);
+            }
+
+            $seenProducts[$identity] = true;
+            $totalCost += (float) $item['purchase_price'] * (int) $item['stock'];
             $totalQuantity += (int) $item['stock'];
         }
 
-        // Si se financia alzando de ventas acumuladas, validar saldo disponible
-        if ($fundingSource === 'sales_revenue') {
-            $availableBalance = ProductPurchase::availableSalesBalance();
-            if ($totalCost > $availableBalance) {
-                return redirect()->back()
-                    ->withInput()
-                    ->with('error', "Saldo insuficiente en ingresos de ventas. Disponible: S/. " . number_format($availableBalance, 2) . ", pero la compra requiere S/. " . number_format($totalCost, 2) . ". Selecciona 'Nueva Inversión' o ajusta las cantidades.");
-            }
+        if ($validated['funding_source'] === 'sales_revenue' && $totalCost > ProductPurchase::availableSalesBalance()) {
+            return back()->withInput()->with('error', sprintf(
+                'El fondo de ventas no alcanza. Disponible: S/. %s; costo del ingreso: S/. %s.',
+                number_format(ProductPurchase::availableSalesBalance(), 2),
+                number_format($totalCost, 2),
+            ));
         }
 
-        DB::transaction(function () use ($productsData, $fundingSource, $totalCost, $totalQuantity, $minStockDefault, $request) {
-            // 1. Crear o actualizar stock de los productos
-            foreach ($productsData as $item) {
-                $salePrice = !empty($item['sale_price']) && $item['sale_price'] > 0
-                    ? (float) $item['sale_price']
-                    : ((float) $item['purchase_price'] * 1.20);
+        $photoPath = $request->file('photo')?->store('inventory-receipts', 'public');
 
-                $existingProduct = Product::where('code', $item['code'])->first();
+        try {
+            $purchase = DB::transaction(function () use ($validated, $totalCost, $totalQuantity, $photoPath) {
+                $purchase = ProductPurchase::create([
+                    'user_id' => auth()->id(),
+                    'purchase_date' => $validated['purchase_date'],
+                    'supplier' => $validated['supplier'] ?? null,
+                    'reference' => $validated['reference'] ?? null,
+                    'total_cost' => $totalCost,
+                    'funding_source' => $validated['funding_source'],
+                    'items_count' => count($validated['products']),
+                    'total_items_quantity' => $totalQuantity,
+                    'notes' => $validated['notes'] ?? null,
+                    'photo_path' => $photoPath,
+                ]);
 
-                if ($existingProduct) {
-                    $existingProduct->increment('stock', (int) $item['stock'], [
-                        'name' => $item['name'],
-                        'description' => $item['description'] ?? $existingProduct->description,
-                        'purchase_price' => $item['purchase_price'],
+                foreach ($validated['products'] as $index => $item) {
+                    $code = strtoupper(trim($item['code']));
+                    $salePrice = ! empty($item['sale_price'])
+                        ? (float) $item['sale_price']
+                        : round((float) $item['purchase_price'] * 1.20, 2);
+
+                    $product = ! empty($item['product_id'])
+                        ? Product::lockForUpdate()->findOrFail($item['product_id'])
+                        : Product::lockForUpdate()->where('code', $code)->first();
+
+                    if ($product && $product->code !== $code && Product::where('code', $code)->whereKeyNot($product->id)->exists()) {
+                        throw ValidationException::withMessages([
+                            "products.{$index}.code" => "El código {$code} ya pertenece a otro producto.",
+                        ]);
+                    }
+
+                    if ($product) {
+                        $product->update([
+                            'code' => $code,
+                            'name' => $item['name'],
+                            'category' => $item['category'],
+                            'description' => $item['description'] ?? $product->description,
+                            'purchase_price' => $item['purchase_price'],
+                            'sale_price' => $salePrice,
+                        ]);
+                        $product->increment('stock', (int) $item['stock']);
+                    } else {
+                        $product = Product::create([
+                            'code' => $code,
+                            'name' => $item['name'],
+                            'category' => $item['category'],
+                            'description' => $item['description'] ?? null,
+                            'purchase_price' => $item['purchase_price'],
+                            'sale_price' => $salePrice,
+                            'stock' => (int) $item['stock'],
+                            'min_stock' => 5,
+                        ]);
+                    }
+
+                    ProductPurchaseItem::create([
+                        'product_purchase_id' => $purchase->id,
+                        'product_id' => $product->id,
+                        'product_code' => $product->code,
+                        'product_name' => $product->name,
+                        'lot_number' => $item['lot_number'] ?: 'LOT-'.$purchase->purchase_date->format('Ymd').'-'.str_pad((string) ($index + 1), 2, '0', STR_PAD_LEFT),
+                        'quantity' => (int) $item['stock'],
+                        'unit_cost' => (float) $item['purchase_price'],
                         'sale_price' => $salePrice,
-                    ]);
-                } else {
-                    Product::create([
-                        'code'           => $item['code'],
-                        'name'           => $item['name'],
-                        'description'    => $item['description'] ?? '',
-                        'purchase_price' => $item['purchase_price'],
-                        'sale_price'     => $salePrice,
-                        'stock'          => $item['stock'],
-                        'min_stock'      => $minStockDefault,
+                        'subtotal' => (float) $item['purchase_price'] * (int) $item['stock'],
                     ]);
                 }
+
+                if ($validated['funding_source'] === 'sales_revenue') {
+                    Expense::create([
+                        'user_id' => auth()->id(),
+                        'product_purchase_id' => $purchase->id,
+                        'expense_date' => $validated['purchase_date'],
+                        'category' => 'inventory_purchase',
+                        'description' => "Compra de mercadería #{$purchase->id}",
+                        'amount' => $totalCost,
+                        'payment_source' => 'sales_revenue',
+                        'photo_path' => $photoPath,
+                        'notes' => $validated['notes'] ?? null,
+                    ]);
+                }
+
+                return $purchase;
+            });
+        } catch (Throwable $exception) {
+            if ($photoPath) {
+                Storage::disk('public')->delete($photoPath);
             }
 
-            // 2. Registrar la compra y su origen de inversión
-            ProductPurchase::create([
-                'user_id' => auth()->id(),
-                'total_cost' => $totalCost,
-                'funding_source' => $fundingSource,
-                'items_count' => count($productsData),
-                'total_items_quantity' => $totalQuantity,
-                'notes' => $request->input('notes'),
-            ]);
-        });
+            throw $exception;
+        }
 
-        $sourceLabel = $fundingSource === 'new_investment' 
-            ? 'Nueva Inversión (Capital Externo)' 
-            : 'Alzado del Ingreso Acumulado de Ventas';
-
-        return redirect()->route('products.index')
-            ->with('success', count($productsData) . " productos registrados (Total: S/. " . number_format($totalCost, 2) . ") financiados con {$sourceLabel}.");
+        return redirect()->route('inventory-entries.show', $purchase)
+            ->with('success', sprintf(
+                'Ingreso registrado: %d unidades por S/. %s. El stock y los precios actuales fueron actualizados.',
+                $totalQuantity,
+                number_format($totalCost, 2),
+            ));
     }
 
-    public function show($id)
+    public function edit(Product $product)
     {
-        //
+        $categories = Product::categories();
+
+        return view('products.partials.edit', compact('product', 'categories'));
     }
 
-    public function edit($id)
+    public function update(Request $request, Product $product)
     {
-        $product = Product::findOrFail($id);
-        return view('products.partials.edit', compact('product'));
-    }
-
-    public function update(Request $request, $id)
-    {
-        $product = Product::findOrFail($id);
-
-        $request->validate([
-            'code' => 'required|string|max:100|unique:products,code,' . $id,
-            'name' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'purchase_price' => 'required|numeric|min:0',
-            'sale_price' => 'nullable|numeric|min:0',
-            'stock' => 'required|integer|min:0',
+        $validated = $request->validate([
+            'code' => ['required', 'string', 'max:20', Rule::unique('products', 'code')->ignore($product)],
+            'name' => ['required', 'string', 'max:255'],
+            'category' => ['required', Rule::in(array_keys(Product::categories()))],
+            'description' => ['nullable', 'string'],
+            'purchase_price' => ['required', 'numeric', 'min:0'],
+            'sale_price' => ['required', 'numeric', 'min:0'],
+            'stock' => ['required', 'integer', 'min:0'],
+            'min_stock' => ['required', 'integer', 'min:0'],
         ]);
 
-        $salePrice = $request->filled('sale_price') 
-            ? (float) $request->input('sale_price') 
-            : ((float) $request->input('purchase_price') * 1.20);
-
-        $product->update([
-            'code' => $request->input('code'),
-            'name' => $request->input('name'),
-            'description' => $request->input('description'),
-            'purchase_price' => $request->input('purchase_price'),
-            'sale_price' => $salePrice,
-            'stock' => $request->input('stock'),
-        ]);
+        $validated['code'] = strtoupper(trim($validated['code']));
+        $product->update($validated);
 
         return redirect()->route('products.index')->with('success', 'Producto actualizado correctamente.');
     }
 
-    public function destroy($id)
+    public function destroy(Product $product)
     {
-        $product = Product::findOrFail($id);
+        if ($product->purchaseItems()->exists() || $product->saleDetails()->exists()) {
+            return back()->with('error', 'No se puede eliminar un producto con movimientos históricos. Puedes dejar su stock en cero.');
+        }
+
         $product->delete();
-        return redirect()->route('products.index')->with('success', 'Product deleted successfully.');
+
+        return redirect()->route('products.index')->with('success', 'Producto eliminado.');
     }
 }

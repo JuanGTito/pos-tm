@@ -1,7 +1,7 @@
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Terminal de Ventas - SISventas') }}
+            {{ __('Venta directa') }}
         </h2>
     </x-slot>
 
@@ -259,7 +259,7 @@
         const cant = parseFloat(item.querySelector('.cantidad-input').value) || 0;
         const prec = parseFloat(item.querySelector('input[name*="[price]"]').value) || 0;
         const sub = cant * prec;
-        item.querySelector('.subtotal-display').value = 'S/. ' + sub.toFixed(2);
+        item.querySelector('.subtotal-display').textContent = 'S/. ' + sub.toFixed(2);
         item.querySelector('.subtotal-value').value = sub.toFixed(2);
         actualizarTotales();
     }

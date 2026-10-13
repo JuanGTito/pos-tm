@@ -78,7 +78,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <p class="text-gray-600 text-sm uppercase">Subtotal</p>
-                            <p class="text-3xl font-bold text-gray-900">S/. {{ number_format($sale->total, 2) }}</p>
+                            <p class="text-3xl font-bold text-gray-900">S/. {{ number_format($sale->total - $sale->tax, 2) }}</p>
                         </div>
                         <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                             <p class="text-gray-600 text-sm uppercase">Impuesto (19%)</p>
@@ -86,7 +86,7 @@
                         </div>
                         <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
                             <p class="text-gray-600 text-sm uppercase">Total</p>
-                            <p class="text-3xl font-bold text-indigo-600">S/. {{ number_format($sale->total + $sale->tax, 2) }}</p>
+                            <p class="text-3xl font-bold text-indigo-600">S/. {{ number_format($sale->total, 2) }}</p>
                         </div>
                     </div>
 

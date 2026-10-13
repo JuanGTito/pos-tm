@@ -1,3 +1,46 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    [x-cloak] {
+        display: none !important;
+    }
+
+    html {
+        text-rendering: optimizeLegibility;
+    }
+
+    body {
+        letter-spacing: -0.006em;
+    }
+
+    h1,
+    h2,
+    h3,
+    h4 {
+        letter-spacing: -0.025em;
+    }
+
+    ::selection {
+        @apply bg-blue-100 text-blue-950;
+    }
+}
+
+@layer components {
+    .ui-card {
+        @apply rounded-2xl border border-slate-200/80 bg-white shadow-sm shadow-slate-200/50;
+    }
+
+    .ui-label {
+        @apply mb-1.5 block text-sm font-semibold text-slate-700;
+    }
+
+    .ui-input {
+        @apply block w-full rounded-xl border-slate-300 bg-white text-sm text-slate-900 shadow-sm transition placeholder:text-slate-400 focus:border-blue-500 focus:ring-blue-500;
+    }
+
+    .ui-help {
+        @apply mt-1.5 text-xs leading-5 text-slate-500;
+    }
+}

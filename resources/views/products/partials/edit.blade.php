@@ -33,9 +33,18 @@
                                 class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                         </div>
 
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Categoría</label>
+                            <select id="category" name="category" required class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                                @foreach($categories as $code => $name)
+                                    <option value="{{ $code }}" @selected(old('category', $product->category ?: substr($product->code, 0, 3)) === $code)>{{ $name }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
                         <div class="md:col-span-2">
                             <label for="description" class="block text-sm font-medium text-gray-700 mb-1">Descripción</label>
-                            <textarea id="description" name="description" rows="3" required
+                            <textarea id="description" name="description" rows="3"
                                 class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">{{ old('description', $product->description) }}</textarea>
                         </div>
 
@@ -64,6 +73,12 @@
                         <div>
                             <label for="stock" class="block text-sm font-medium text-gray-700 mb-1">Stock Actual</label>
                             <input type="number" id="stock" name="stock" value="{{ old('stock', $product->stock) }}" required
+                                class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
+                        </div>
+
+                        <div>
+                            <label for="min_stock" class="block text-sm font-medium text-gray-700 mb-1">Alerta de stock mínimo</label>
+                            <input type="number" min="0" id="min_stock" name="min_stock" value="{{ old('min_stock', $product->min_stock) }}" required
                                 class="w-full border-gray-300 focus:border-indigo-500 focus:ring-indigo-500 rounded-md shadow-sm">
                         </div>
                     </div>

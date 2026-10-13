@@ -1,189 +1,101 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Dashboard') }}
-        </h2>
+        <div>
+            <h1 class="text-lg font-bold text-slate-950 md:text-xl">Resumen del negocio</h1>
+            <p class="mt-0.5 hidden text-sm text-slate-500 sm:block">Ventas, fondo disponible, gastos e inventario en un solo lugar.</p>
+        </div>
     </x-slot>
 
-    <div class="py-12">
-        <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
-            <!-- Resumen Financiero y Flujo de Capital -->
-            <div class="mb-6">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-gray-500 mb-3">Balance Financiero y Capital</h3>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl p-5 border-l-4 border-indigo-500">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Ingresos por Ventas</p>
-                        <p class="text-2xl font-black text-gray-900 mt-1">S/. {{ number_format(\App\Models\Sale::sum('total'), 2) }}</p>
-                        <p class="text-[11px] text-gray-400 mt-1">Precio final cobrado acumulado</p>
-                    </div>
+    <div class="space-y-6">
+        <section class="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+            <article class="ui-card p-5">
+                <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-violet-50 text-violet-600"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 3h10a2 2 0 0 1 2 2v16l-3-2-4 2-4-2-3 2V5a2 2 0 0 1 2-2Zm2 5h6M9 12h6"/></svg></div>
+                <p class="text-sm font-medium text-slate-500">Ventas acumuladas</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight text-slate-950">S/. {{ number_format($metrics['sales'], 2) }}</p>
+                <p class="mt-2 text-xs text-slate-400">Total final cobrado</p>
+            </article>
+            <article class="ui-card p-5">
+                <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-blue-50 text-blue-600"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 7h15a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h12M16 13h5"/></svg></div>
+                <p class="text-sm font-medium text-slate-500">Fondo disponible</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight text-blue-700">S/. {{ number_format($metrics['available'], 2) }}</p>
+                <p class="mt-2 text-xs text-slate-400">Ventas menos egresos</p>
+            </article>
+            <article class="ui-card p-5">
+                <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-rose-50 text-rose-600"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v18m5-14H9.5a3.5 3.5 0 0 0 0 7H15a3 3 0 0 1 0 6H6"/></svg></div>
+                <p class="text-sm font-medium text-slate-500">Egresos desde ventas</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight text-rose-700">S/. {{ number_format($metrics['expenses'], 2) }}</p>
+                <p class="mt-2 text-xs text-slate-400">Incluye reposiciones</p>
+            </article>
+            <article class="ui-card p-5">
+                <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-amber-50 text-amber-600"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M4 9h16v11H4V9Zm2-5h12l2 5H4l2-5Zm6 8v5m-2-2 2 2 2-2"/></svg></div>
+                <p class="text-sm font-medium text-slate-500">Reinvertido</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight text-amber-700">S/. {{ number_format($metrics['reinvested'], 2) }}</p>
+                <p class="mt-2 text-xs text-slate-400">Mercadería pagada con ventas</p>
+            </article>
+            <article class="ui-card p-5 sm:col-span-2 xl:col-span-1">
+                <div class="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-50 text-emerald-600"><svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v18m4-14.5c-.7-.9-2-1.5-4-1.5-2.2 0-4 1.1-4 3s1.8 3 4 3 4 1.1 4 3-1.8 3-4 3c-2 0-3.3-.6-4-1.5"/></svg></div>
+                <p class="text-sm font-medium text-slate-500">Inversión externa</p>
+                <p class="mt-1 text-2xl font-bold tracking-tight text-emerald-700">S/. {{ number_format($metrics['external_investment'], 2) }}</p>
+                <p class="mt-2 text-xs text-slate-400">Capital nuevo aportado</p>
+            </article>
+        </section>
 
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl p-5 border-l-4 border-blue-500">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Disponible de Ventas</p>
-                        <p class="text-2xl font-black text-blue-600 mt-1">S/. {{ number_format(\App\Models\ProductPurchase::availableSalesBalance(), 2) }}</p>
-                        <p class="text-[11px] text-blue-500 font-medium mt-1">Saldo libre para alzar/compras</p>
-                    </div>
+        <section class="ui-card grid grid-cols-2 divide-x divide-y divide-slate-100 overflow-hidden sm:grid-cols-3 lg:grid-cols-5 lg:divide-y-0">
+            <div class="p-5"><p class="text-sm text-slate-500">Venta de hoy</p><p class="mt-1 text-xl font-bold text-blue-700">S/. {{ number_format($metrics['sales_today'], 2) }}</p></div>
+            <div class="p-5"><p class="text-sm text-slate-500">Productos</p><p class="mt-1 text-xl font-bold text-slate-900">{{ $metrics['products'] }}</p></div>
+            <div class="p-5"><p class="text-sm text-slate-500">Unidades</p><p class="mt-1 text-xl font-bold text-slate-900">{{ $metrics['units'] }}</p></div>
+            <div class="p-5"><p class="text-sm text-slate-500">Stock bajo</p><p class="mt-1 text-xl font-bold text-rose-700">{{ $metrics['low_stock'] }}</p></div>
+            <div class="col-span-2 p-5 sm:col-span-1"><p class="text-sm text-slate-500">Costo del stock</p><p class="mt-1 text-xl font-bold text-emerald-700">S/. {{ number_format($metrics['inventory_cost'], 2) }}</p></div>
+        </section>
 
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl p-5 border-l-4 border-amber-500">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Reinvertido de Ventas</p>
-                        <p class="text-2xl font-black text-amber-600 mt-1">S/. {{ number_format(\App\Models\ProductPurchase::totalReinvestedFromSales(), 2) }}</p>
-                        <p class="text-[11px] text-gray-400 mt-1">Alzado de ventas para mercadería</p>
-                    </div>
+        <section class="ui-card flex flex-wrap items-center gap-3 p-4">
+            <a href="{{ route('sales.create') }}" class="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white shadow-sm shadow-blue-200 transition hover:bg-blue-700">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14M5 12h14"/></svg>
+                Registrar venta
+            </a>
+            <a href="{{ route('products.create') }}" class="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 9h16v11H4V9Zm2-5h12l2 5H4l2-5Z"/></svg>
+                Ingresar mercadería
+            </a>
+            <a href="{{ route('expenses.create') }}" class="inline-flex items-center gap-2 rounded-xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-semibold text-rose-700 transition hover:bg-rose-100">
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m4-11H9.5a3.5 3.5 0 0 0 0 7H15a3 3 0 0 1 0 6H8"/></svg>
+                Registrar gasto
+            </a>
+        </section>
 
-                    <div class="bg-white overflow-hidden shadow-sm sm:rounded-xl p-5 border-l-4 border-emerald-500">
-                        <p class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Nueva Inversión</p>
-                        <p class="text-2xl font-black text-emerald-600 mt-1">S/. {{ number_format(\App\Models\ProductPurchase::totalNewInvestment(), 2) }}</p>
-                        <p class="text-[11px] text-gray-400 mt-1">Capital aportado externo</p>
-                    </div>
+        <section class="grid gap-6 xl:grid-cols-3">
+            <div class="ui-card overflow-hidden xl:col-span-2">
+                <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4 sm:px-6">
+                    <div><h2 class="font-bold text-slate-950">Inventario reciente</h2><p class="mt-0.5 text-sm text-slate-500">Últimos productos registrados.</p></div>
+                    <a href="{{ route('products.index') }}" class="text-sm font-semibold text-blue-700 hover:text-blue-800">Ver inventario</a>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-slate-200">
+                        <thead class="bg-slate-50/80 text-left text-xs font-semibold text-slate-500"><tr><th class="px-6 py-3">Producto</th><th class="px-4 py-3">Categoría</th><th class="px-4 py-3 text-right">Precio</th><th class="px-6 py-3 text-right">Stock</th></tr></thead>
+                        <tbody class="divide-y divide-slate-100 bg-white">
+                            @forelse($recentProducts as $product)
+                                <tr class="transition hover:bg-slate-50/70"><td class="px-6 py-3.5 text-sm"><p class="font-semibold text-slate-900">{{ $product->name }}</p><p class="text-xs text-slate-500">{{ $product->code }}</p></td><td class="px-4 py-3.5 text-sm text-slate-600">{{ $product->category_name }}</td><td class="px-4 py-3.5 text-right text-sm font-semibold text-emerald-700">S/. {{ number_format($product->sale_price, 2) }}</td><td class="px-6 py-3.5 text-right"><span class="rounded-full px-2.5 py-1 text-xs font-semibold {{ $product->stock <= $product->min_stock ? 'bg-rose-50 text-rose-700' : 'bg-emerald-50 text-emerald-700' }}">{{ $product->stock }}</span></td></tr>
+                            @empty
+                                <tr><td colspan="4" class="px-6 py-10 text-center text-sm text-slate-500">Sin productos registrados.</td></tr>
+                            @endforelse
+                        </tbody>
+                    </table>
                 </div>
             </div>
 
-            <!-- Resumen de Inventario -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="text-gray-900">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Total de Productos</h3>
-                        <p class="text-3xl font-bold text-indigo-600">{{ \App\Models\Product::count() }}</p>
-                    </div>
+            <div class="ui-card overflow-hidden">
+                <div class="flex items-center justify-between border-b border-slate-100 px-5 py-4">
+                    <div><h2 class="font-bold text-slate-950">Últimos gastos</h2><p class="mt-0.5 text-sm text-slate-500">Movimientos recientes.</p></div>
+                    <a href="{{ route('expenses.index') }}" class="text-sm font-semibold text-blue-700 hover:text-blue-800">Ver todos</a>
                 </div>
-
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="text-gray-900">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Stock Total</h3>
-                        <p class="text-3xl font-bold text-green-600">{{ \App\Models\Product::sum('stock') }}</p>
-                    </div>
-                </div>
-
-                <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg p-6">
-                    <div class="text-gray-900">
-                        <h3 class="text-lg font-semibold text-gray-800 mb-2">Stock Bajo</h3>
-                        <p class="text-3xl font-bold text-red-600">{{ \App\Models\Product::whereRaw('stock <= min_stock')->count() }}</p>
-                    </div>
+                <div class="space-y-2 p-4">
+                    @forelse($recentExpenses as $expense)
+                        <div class="flex items-start justify-between gap-3 rounded-xl bg-slate-50 p-3.5"><div><p class="text-sm font-semibold text-slate-800">{{ $expense->description }}</p><p class="mt-0.5 text-xs text-slate-500">{{ $expense->expense_date->format('d/m/Y') }} · {{ $expense->category_label }}</p></div><p class="whitespace-nowrap text-sm font-bold text-rose-700">S/. {{ number_format($expense->amount, 2) }}</p></div>
+                    @empty
+                        <p class="py-8 text-center text-sm text-slate-500">Sin gastos registrados.</p>
+                    @endforelse
                 </div>
             </div>
-
-            <!-- Acciones Rápidas -->
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg mb-6">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="text-lg font-semibold text-gray-800">Acciones Principales</h3>
-                        <a href="{{ route('sales.index') }}" class="text-indigo-600 hover:text-indigo-900 font-medium text-sm">Ver todas las ventas →</a>
-                    </div>
-
-                    <div class="flex flex-wrap gap-4">
-                        <a href="{{ route('sales.create') }}" class="inline-flex items-center px-6 py-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors font-semibold shadow-md">
-                            <span class="mr-2">💳</span> + Nueva Venta
-                        </a>
-                        <a href="{{ route('products.create') }}" class="inline-flex items-center px-6 py-3 bg-emerald-600 text-white rounded-xl hover:bg-emerald-700 transition-colors font-semibold shadow-md">
-                            <span class="mr-2">📦</span> + Ingresar Mercadería / Inversión
-                        </a>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Tabla de Productos Recientes -->
-            <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
-                <div class="p-6">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-semibold text-gray-800">Productos Recientes</h3>
-                        <a href="{{ route('products.index') }}" class="text-indigo-600 hover:text-indigo-900 font-medium">Ver todos</a>
-                    </div>
-
-                    <!-- Buscador -->
-                    <div class="mb-6">
-                        <div class="flex gap-3">
-                            <input 
-                                type="text" 
-                                id="dashboardSearchInput" 
-                                placeholder="Buscar productos..." 
-                                class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            >
-                            <button id="dashboardSearchBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-                                Buscar
-                            </button>
-                        </div>
-                    </div>
-
-                    <!-- Tabla -->
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full bg-white border border-gray-300 rounded-lg shadow">
-                            <thead class="bg-gray-100 border-b border-gray-300">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Código</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Nombre</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Precio Venta</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Stock</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Estado</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-700 uppercase tracking-wider">Acciones</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-gray-200" id="dashboardProductsTable">
-                                @php
-                                    $recentProducts = \App\Models\Product::orderBy('id', 'desc')->limit(10)->get();
-                                @endphp
-                                @foreach($recentProducts as $product)
-                                    <tr class="hover:bg-gray-50 transition-colors">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{{ $product->code }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">{{ $product->name }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-green-600">${{ number_format($product->sale_price, 2) }}</td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full @if($product->stock > $product->min_stock) bg-green-100 text-green-800 @else bg-red-100 text-red-800 @endif">
-                                                {{ $product->stock }}
-                                            </span>
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm">
-                                            @if($product->stock > $product->min_stock)
-                                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                                                    Disponible
-                                                </span>
-                                            @else
-                                                <span class="px-3 py-1 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">
-                                                    Stock Bajo
-                                                </span>
-                                            @endif
-                                        </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                                            <a href="{{ route('products.edit', $product->id) }}" class="text-indigo-600 hover:text-indigo-900">Editar</a>
-                                        </td>
-                                    </tr>
-                                @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
+        </section>
     </div>
-
-    <!-- Script para búsqueda en dashboard -->
-    <script>
-        document.getElementById('dashboardSearchBtn').addEventListener('click', function() {
-            performDashboardSearch();
-        });
-
-        document.getElementById('dashboardSearchInput').addEventListener('keypress', function(e) {
-            if (e.key === 'Enter') {
-                performDashboardSearch();
-            }
-        });
-
-        function performDashboardSearch() {
-            const search = document.getElementById('dashboardSearchInput').value;
-            
-            fetch(`{{ route('products.index') }}?search=${encodeURIComponent(search)}`, {
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'Accept': 'text/html',
-                },
-            })
-            .then(response => response.text())
-            .then(html => {
-                // Extrae el contenido de la tabla del HTML devuelto
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const tableBody = doc.querySelector('tbody');
-                document.querySelector('#dashboardProductsTable').innerHTML = tableBody ? tableBody.innerHTML : '<tr><td colspan="6" class="px-6 py-4 text-center text-sm text-gray-500">No se encontraron productos.</td></tr>';
-            })
-            .catch(error => console.error('Error:', error));
-        }
-    </script>
 </x-app-layout>

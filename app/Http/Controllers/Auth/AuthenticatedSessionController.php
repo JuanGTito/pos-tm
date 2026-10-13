@@ -24,10 +24,6 @@ class AuthenticatedSessionController extends Controller
      */
     public function store(LoginRequest $request): RedirectResponse
     {
-        $request->validate([
-            'name' => ['required', 'string'],
-            'password' => ['required', 'string'],
-        ]);
         $request->authenticate();
 
         $request->session()->regenerate();

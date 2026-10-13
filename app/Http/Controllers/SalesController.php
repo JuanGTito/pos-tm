@@ -2,15 +2,15 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Customer;
+use App\Models\Product;
 use App\Models\Sale;
 use App\Models\SaleDetail;
-use App\Models\Product;
-use App\Models\Customer;
+use Carbon\Carbon;
+use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
-use Carbon\Carbon;
 
 class SalesController extends Controller
 {
@@ -20,21 +20,21 @@ class SalesController extends Controller
      * Display a listing of the resource.
      */
     public function index()
-{
-    $user = Auth::user();
+    {
+        $user = Auth::user();
 
-    $query = Sale::query();
+        $query = Sale::query();
 
-    if (!$user->hasRole('admin')) {
-        $query->where('user_id', $user->id);
+        if (! $user->hasRole('admin')) {
+            $query->where('user_id', $user->id);
+        }
+
+        $sales = $query->with(['customer', 'user'])
+            ->orderBy('sale_date', 'desc')
+            ->paginate(15);
+
+        return view('sales.index', compact('sales'));
     }
-
-    $sales = $query->with(['customer', 'user'])
-                   ->orderBy('sale_date', 'desc')
-                   ->paginate(15);
-
-    return view('sales.index', compact('sales'));
-}
 
     /**
      * Show the form for creating a new resource.
@@ -42,6 +42,7 @@ class SalesController extends Controller
     public function create()
     {
         $products = Product::where('stock', '>', 0)->get();
+
         return view('sales.partials.create', compact('products'));
     }
 
@@ -66,7 +67,7 @@ class SalesController extends Controller
 
             // 1. Cliente: Buscar o crear
             $customer = Customer::where('document_id', $request->input('customer_dni'))->first();
-            if (!$customer) {
+            if (! $customer) {
                 $customer = Customer::create([
                     'document_id' => $request->input('customer_dni'),
                     'name' => $request->input('customer_name'),
@@ -78,7 +79,7 @@ class SalesController extends Controller
                 'user_id' => $user->id, // Esto asegura que la SalesPolicy reconozca al dueño
                 'customer_id' => $customer->id,
                 'sale_date' => Carbon::now()->toDateString(),
-                'total' => 0, 
+                'total' => 0,
                 'tax' => 0,
                 'status' => 'completed',
             ]);
@@ -87,7 +88,7 @@ class SalesController extends Controller
 
             // 3. Procesar ítems
             foreach ($request->input('items') as $item) {
-                $product = Product::findOrFail($item['product_id']);
+                $product = Product::lockForUpdate()->findOrFail($item['product_id']);
 
                 if ($product->stock < $item['quantity']) {
                     throw new \Exception("Stock insuficiente para {$product->name}");
@@ -124,8 +125,9 @@ class SalesController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->route('sales.create')
-                ->with('error', 'Error al registrar venta: ' . $e->getMessage());
+                ->with('error', 'Error al registrar venta: '.$e->getMessage());
         }
     }
 
@@ -181,7 +183,7 @@ class SalesController extends Controller
             // Process new items
             $total = 0;
             foreach ($request->input('items', []) as $item) {
-                $product = Product::findOrFail($item['product_id']);
+                $product = Product::lockForUpdate()->findOrFail($item['product_id']);
 
                 if ($product->stock < $item['quantity']) {
                     throw new \Exception("Insufficient stock for {$product->name}");
@@ -203,7 +205,8 @@ class SalesController extends Controller
                     ->decrement('stock', $item['quantity']);
             }
 
-            $tax = $total * 0.19;
+            $baseAmount = $total / 1.19;
+            $tax = $total - $baseAmount;
 
             $sale->update([
                 'customer_id' => $request->input('customer_id'),
@@ -213,13 +216,14 @@ class SalesController extends Controller
 
             DB::commit();
 
-            return redirect()->route('sales.partials.show', $sale->id)
-                ->with('success', 'Sale updated successfully.');
+            return redirect()->route('sales.show', $sale->id)
+                ->with('success', 'Venta actualizada correctamente.');
 
         } catch (\Exception $e) {
             DB::rollBack();
-            return redirect()->route('sales.partials.edit', $sale->id)
-                ->with('error', 'Error updating sale: ' . $e->getMessage());
+
+            return redirect()->route('sales.edit', $sale->id)
+                ->with('error', 'Error updating sale: '.$e->getMessage());
         }
     }
 
@@ -252,8 +256,9 @@ class SalesController extends Controller
 
         } catch (\Exception $e) {
             DB::rollBack();
+
             return redirect()->route('sales.index')
-                ->with('error', 'Error deleting sale: ' . $e->getMessage());
+                ->with('error', 'Error deleting sale: '.$e->getMessage());
         }
     }
 
@@ -268,9 +273,9 @@ class SalesController extends Controller
             return response()->json([]);
         }
 
-        $customers = Customer::where('document_id', 'LIKE', '%' . $query . '%')
-            ->orWhere('name', 'LIKE', '%' . $query . '%')
-            ->select('id', 'document_id', 'name', 'email', 'phone', 'address')
+        $customers = Customer::where('document_id', 'LIKE', '%'.$query.'%')
+            ->orWhere('name', 'LIKE', '%'.$query.'%')
+            ->select('id', 'document_id', 'name')
             ->limit(10)
             ->get();
 
@@ -290,9 +295,9 @@ class SalesController extends Controller
 
         $products = Product::where('stock', '>', 0)
             ->where(function ($q) use ($query) {
-                $q->where('code', 'LIKE', '%' . $query . '%')
-                  ->orWhere('name', 'LIKE', '%' . $query . '%')
-                  ->orWhere('description', 'LIKE', '%' . $query . '%');
+                $q->where('code', 'LIKE', '%'.$query.'%')
+                    ->orWhere('name', 'LIKE', '%'.$query.'%')
+                    ->orWhere('description', 'LIKE', '%'.$query.'%');
             })
             ->select('id', 'code', 'name', 'sale_price', 'stock')
             ->limit(15)
@@ -301,4 +306,3 @@ class SalesController extends Controller
         return response()->json($products);
     }
 }
-

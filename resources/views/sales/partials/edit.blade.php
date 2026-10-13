@@ -94,7 +94,7 @@
                         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
                             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <p class="text-gray-600 text-sm uppercase">Subtotal</p>
-                                <p class="text-3xl font-bold text-gray-900">S/. <span id="subtotalTotal">{{ number_format($sale->total, 2) }}</span></p>
+                                <p class="text-3xl font-bold text-gray-900">S/. <span id="subtotalTotal">{{ number_format($sale->total - $sale->tax, 2) }}</span></p>
                             </div>
                             <div class="bg-gray-50 p-4 rounded-lg border border-gray-200">
                                 <p class="text-gray-600 text-sm uppercase">Impuesto (19%)</p>
@@ -102,7 +102,7 @@
                             </div>
                             <div class="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
                                 <p class="text-gray-600 text-sm uppercase">Total</p>
-                                <p class="text-3xl font-bold text-indigo-600">S/. <span id="totalVenta">{{ number_format($sale->total + $sale->tax, 2) }}</span></p>
+                                <p class="text-3xl font-bold text-indigo-600">S/. <span id="totalVenta">{{ number_format($sale->total, 2) }}</span></p>
                             </div>
                         </div>
                     </div>
@@ -154,10 +154,11 @@
                 totalSubtotal += parseFloat(subtotal);
             });
 
-            const impuesto = totalSubtotal * 0.19;
-            const total = totalSubtotal + impuesto;
+            const total = totalSubtotal;
+            const baseImponible = total / 1.19;
+            const impuesto = total - baseImponible;
 
-            document.getElementById('subtotalTotal').textContent = parseFloat(totalSubtotal).toFixed(2);
+            document.getElementById('subtotalTotal').textContent = parseFloat(baseImponible).toFixed(2);
             document.getElementById('impuestoTotal').textContent = parseFloat(impuesto).toFixed(2);
             document.getElementById('totalVenta').textContent = parseFloat(total).toFixed(2);
         }

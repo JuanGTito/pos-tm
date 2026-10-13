@@ -13,21 +13,29 @@
                     {{ session('success') }}
                 </div>
             @endif
+            @if(session('error'))
+                <div class="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded-lg">
+                    {{ session('error') }}
+                </div>
+            @endif
 
             <!-- Card Principal -->
             <div class="bg-white overflow-hidden shadow-sm sm:rounded-lg">
                 <div class="p-6 text-gray-900">
                     <!-- Cabecera con título y botón -->
                     <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-lg font-semibold text-gray-800">Productos Disponibles</h3>
+                        <div>
+                            <h3 class="text-lg font-semibold text-gray-800">Inventario actual</h3>
+                            <p class="text-sm text-gray-500">Equipos, accesorios y productos no perecederos.</p>
+                        </div>
                         <a href="{{ route('products.create') }}" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors">
-                            + Nuevo Producto
+                            + Ingresar mercadería
                         </a>
                     </div>
 
                     <!-- Buscador dinámico -->
                     <div class="mb-6">
-                        <div class="flex gap-3">
+                        <div class="flex flex-col gap-3 md:flex-row">
                             <input 
                                 type="text" 
                                 id="searchInput" 
@@ -35,6 +43,12 @@
                                 class="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                                 value="{{ $search }}"
                             >
+                            <select id="categoryFilter" class="rounded-lg border-gray-300">
+                                <option value="">Todas las categorías</option>
+                                @foreach($categories as $code => $name)
+                                    <option value="{{ $code }}" @selected($category === $code)>{{ $name }}</option>
+                                @endforeach
+                            </select>
                             <button id="searchBtn" class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
                                 Buscar
                             </button>
@@ -69,9 +83,10 @@
 
         function performSearch() {
             const search = document.getElementById('searchInput').value;
+            const category = document.getElementById('categoryFilter').value;
             
             // Realiza petición AJAX al servidor
-            fetch(`{{ route('products.index') }}?search=${encodeURIComponent(search)}`, {
+            fetch(`{{ route('products.index') }}?search=${encodeURIComponent(search)}&category=${encodeURIComponent(category)}`, {
                 headers: {
                     'X-Requested-With': 'XMLHttpRequest',
                     'Accept': 'text/html',
@@ -84,6 +99,8 @@
             })
             .catch(error => console.error('Error:', error));
         }
+
+        document.getElementById('categoryFilter').addEventListener('change', performSearch);
 
         function editProduct(id) {
             window.location.href = `/products/${id}/edit`;

@@ -10,8 +10,17 @@ class Business extends Model
         'name',
         'address',
         'phone',
+        'mobile',
         'email',
+        'website',
         'nit_ruc',
+        'business_type',
+        'receipt_series',
         'logo',
+        'system_icon',
+        'district',
+        'province',
+        'department',
+        'country',
     ];
 }
